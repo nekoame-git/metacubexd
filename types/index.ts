@@ -202,6 +202,7 @@ export type DataUsageType =
   | 'process'
   | 'outbound'
   | 'inboundUser'
+  | 'rule'
 
 export interface DataUsageEntry {
   type: DataUsageType

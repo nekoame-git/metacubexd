@@ -53,6 +53,15 @@ function onSetupSuccess(id: string) {
 }
 
 async function onEndpointSelect(id: string) {
+  if (
+    runtimeConfig.public.serverBackendMode === true &&
+    id === 'server-backend'
+  ) {
+    endpointError.value = null
+    onSetupSuccess(id)
+    return
+  }
+
   const endpoint = endpointStore.endpointList.find((e) => e.id === id)
   if (!endpoint) return
 
@@ -67,6 +76,12 @@ async function onEndpointSelect(id: string) {
 }
 
 async function onSubmit() {
+  if (runtimeConfig.public.serverBackendMode === true) {
+    endpointError.value = null
+    onSetupSuccess('server-backend')
+    return
+  }
+
   isSubmitting.value = true
   endpointError.value = null
 
@@ -137,6 +152,13 @@ onMounted(async () => {
       await onSubmit()
       return
     }
+  }
+
+  if (runtimeConfig.public.serverBackendMode === true) {
+    formData.url = currentOrigin.value
+    formData.secret = ''
+    onSetupSuccess('server-backend')
+    return
   }
 
   // Auto-login with default if no endpoints

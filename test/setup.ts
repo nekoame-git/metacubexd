@@ -23,6 +23,12 @@ vi.stubGlobal('watch', watch)
 vi.stubGlobal('watchEffect', watchEffect)
 vi.stubGlobal('useLocalStorage', useLocalStorage)
 vi.stubGlobal('useSessionStorage', useSessionStorage)
+vi.stubGlobal('useRuntimeConfig', () => ({
+  public: {
+    mockMode: false,
+    serverBackendMode: false,
+  },
+}))
 
 function createStorageMock() {
   let store: Record<string, string> = {}

@@ -41,6 +41,16 @@ export const useLogsStore = defineStore('logs', () => {
     scheduleFlush()
   }
 
+  const setLogs = (nextLogs: LogWithSeq[]) => {
+    if (flushTimer) {
+      clearTimeout(flushTimer)
+      flushTimer = null
+    }
+    pending = []
+    logs.value = nextLogs
+    seq = (nextLogs.reduce((max, log) => Math.max(max, log.seq), 0) || 0) + 1
+  }
+
   const clearLogs = () => {
     if (flushTimer) {
       clearTimeout(flushTimer)
@@ -59,6 +69,7 @@ export const useLogsStore = defineStore('logs', () => {
     logs,
     paused,
     addLog,
+    setLogs,
     clearLogs,
     togglePaused,
   }

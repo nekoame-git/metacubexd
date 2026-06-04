@@ -24,18 +24,24 @@ export default defineNuxtConfig({
     public: {
       appVersion: pkg.version,
       mockMode: process.env.MOCK_MODE === 'true',
+      serverBackendMode: !!(
+        process.env.METACUBEXD_BACKEND_URL || process.env.DEFAULT_BACKEND_URL
+      ),
       defaultBackendURL: '',
     },
   },
 
+  nitro: {
+    experimental: {
+      websocket: true,
+    },
+    watchOptions: {
+      ignored: ['**/.data/**', '**/data/**', '**/*.sqlite*'],
+    },
+  },
+
   // Modules
-  modules: [
-    '@vueuse/nuxt',
-    '@pinia/nuxt',
-    '@nuxtjs/i18n',
-    '@nuxt/fonts',
-    '@vite-pwa/nuxt',
-  ],
+  modules: ['@vueuse/nuxt', '@pinia/nuxt', '@nuxtjs/i18n', '@vite-pwa/nuxt'],
 
   // PWA configuration
   // Restores the PWA support that existed before the Nuxt migration (#1777)
@@ -101,23 +107,6 @@ export default defineNuxtConfig({
     },
   },
 
-  // Fonts configuration - using Ubuntu font
-  fonts: {
-    families: [
-      {
-        name: 'Ubuntu',
-        provider: 'google',
-        weights: [300, 400, 500, 700],
-        styles: ['normal', 'italic'],
-      },
-    ],
-    defaults: {
-      weights: [400, 700],
-      styles: ['normal'],
-      subsets: ['latin', 'latin-ext', 'cyrillic', 'cyrillic-ext'],
-    },
-  },
-
   // TypeScript configuration
   typescript: {
     strict: true,
@@ -179,6 +168,11 @@ export default defineNuxtConfig({
   vite: {
     build: {
       chunkSizeWarningLimit: 1000,
+    },
+    server: {
+      watch: {
+        ignored: ['**/.data/**', '**/data/**', '**/*.sqlite*'],
+      },
     },
     plugins: [tailwindcss()],
   },

@@ -7,10 +7,14 @@ useHead({ title: computed(() => t('home')) })
 const endpointStore = useEndpointStore()
 const configStore = useConfigStore()
 const router = useRouter()
+const runtimeConfig = useRuntimeConfig()
 
 // Redirect to default page if already connected
 onMounted(() => {
-  if (endpointStore.currentEndpoint) {
+  if (
+    runtimeConfig.public.serverBackendMode === true ||
+    endpointStore.currentEndpoint
+  ) {
     router.replace(`/${configStore.defaultPage || 'overview'}`)
   }
 })

@@ -51,10 +51,13 @@ const mockGlobalStore = {
 
 const mockLogsStore = {
   addLog: vi.fn(),
+  setLogs: vi.fn(),
+  paused: false,
 }
 
 const mockConfigStore = {
   logLevel: 'info',
+  logMaxRows: 1000,
 }
 
 vi.stubGlobal('WebSocket', MockWebSocket)
@@ -69,6 +72,12 @@ describe('composables/useWebSocket', () => {
     vi.clearAllMocks()
     MockWebSocket.instances = []
     mockUseMockMode.mockReturnValue(false)
+    vi.stubGlobal('useRuntimeConfig', () => ({
+      public: {
+        mockMode: false,
+        serverBackendMode: false,
+      },
+    }))
   })
 
   it('closes existing sockets before reconnecting', () => {
@@ -111,6 +120,58 @@ describe('composables/useWebSocket', () => {
     reconnectLogs()
 
     expect(MockWebSocket.instances).toHaveLength(0)
+  })
+
+  it('polls stored backend state instead of opening browser sockets in server backend mode', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('useRuntimeConfig', () => ({
+      public: {
+        mockMode: false,
+        serverBackendMode: true,
+      },
+    }))
+    vi.stubGlobal(
+      '$fetch',
+      vi.fn((url: string) => {
+        if (url === '/api/traffic/connections') {
+          return Promise.resolve({
+            uploadTotal: 10,
+            downloadTotal: 20,
+            connections: [],
+            updatedAt: 1,
+          })
+        }
+        if (url === '/api/traffic/realtime') {
+          return Promise.resolve({
+            traffic: { up: 1, down: 2 },
+            memory: { inuse: 3 },
+          })
+        }
+        if (url.startsWith('/api/traffic/logs')) {
+          return Promise.resolve([{ seq: 1, type: 'info', payload: 'ok' }])
+        }
+        return Promise.reject(new Error(`Unexpected URL: ${url}`))
+      }),
+    )
+
+    const { connect } = useBackendWebSocket()
+    connect()
+    await vi.runOnlyPendingTimersAsync()
+
+    expect(MockWebSocket.instances).toHaveLength(0)
+    expect(mockConnectionsStore.updateFromWsMsg).toHaveBeenCalledWith(
+      expect.objectContaining({ uploadTotal: 10, downloadTotal: 20 }),
+    )
+    expect(mockGlobalStore.setLatestTraffic).toHaveBeenCalledWith({
+      up: 1,
+      down: 2,
+    })
+    expect(mockGlobalStore.setLatestMemory).toHaveBeenCalledWith({ inuse: 3 })
+    expect(mockLogsStore.setLogs).toHaveBeenCalledWith([
+      { seq: 1, type: 'info', payload: 'ok' },
+    ])
+
+    vi.useRealTimers()
   })
 
   it('reconnects after an unexpected socket close (e.g. Restart Core)', async () => {

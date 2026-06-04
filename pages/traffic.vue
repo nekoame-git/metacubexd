@@ -7,6 +7,8 @@ import {
   IconCpu,
   IconDevices,
   IconDownload,
+  IconRuler,
+  IconServer,
   IconSum,
   IconTrash,
   IconUpload,
@@ -25,9 +27,11 @@ const {
   getSubStatsByHost,
   getProxyStatsByHost,
   getTrafficTrend,
+  getFilteredTrafficTrend,
   getDevicesByHost,
   getDevicesByProxyAndHost,
 } = useDataUsage()
+const runtimeConfig = useRuntimeConfig()
 
 useHead({ title: computed(() => t('dataUsage')) })
 type SortField = 'label' | 'upload' | 'download' | 'total' | 'count'
@@ -67,6 +71,8 @@ const customEnd = useLocalStorage(
 
 const dataUsageEntries = ref<AggregatedData[]>([])
 const trendData = ref<any[]>([])
+const selectedTrendData = ref<any[]>([])
+const collectorStatus = ref<any>(null)
 const selectedRow = ref<string | null>(null)
 const selectedSubRow = ref<string | null>(null)
 const subStatsMap = ref<Record<string, AggregatedData[]>>({})
@@ -110,6 +116,11 @@ const fetchData = async () => {
 
     dataUsageEntries.value = aggregated
     trendData.value = trend
+    if (runtimeConfig.public.serverBackendMode === true) {
+      collectorStatus.value = await $fetch('/api/traffic/status').catch(
+        () => null,
+      )
+    }
 
     // Auto-select first row if nothing is selected
     const sorted = sortedDataUsageEntries.value
@@ -117,6 +128,7 @@ const fetchData = async () => {
       handleRowClick(sorted[0]!.label)
     } else if (selectedRow.value) {
       await loadSubStats(selectedRow.value)
+      await loadSelectedTrend(selectedRow.value, bucketSizeMs)
     }
   } catch (e) {
     console.error('Failed to fetch traffic data', e)
@@ -154,6 +166,7 @@ const viewOptions = computed(() => [
   { label: t('user'), value: 'inboundUser', icon: IconUser },
   { label: t('host'), value: 'host', icon: IconWorld },
   { label: t('proxies'), value: 'outbound', icon: IconArrowsExchange },
+  { label: t('rule'), value: 'rule', icon: IconRuler },
   { label: t('process'), value: 'process', icon: IconCpu },
 ])
 const currentViewOption = computed(() =>
@@ -200,7 +213,20 @@ async function handleClearAll() {
 const handleRowClick = async (label: string) => {
   selectedRow.value = label
   selectedSubRow.value = null
-  await loadSubStats(label)
+  const { startTime, endTime } = getTimeRange()
+  const rangeMs = endTime - startTime
+  const bucketSizeMs =
+    rangeMs <= 3600000
+      ? 60000
+      : rangeMs <= 86400000
+        ? 300000
+        : rangeMs <= 604800000
+          ? 3600000
+          : 86400000
+  await Promise.all([
+    loadSubStats(label),
+    loadSelectedTrend(label, bucketSizeMs),
+  ])
 }
 
 const loadSubStats = async (label: string) => {
@@ -216,6 +242,17 @@ const loadSubStats = async (label: string) => {
       endTime,
     )
   }
+}
+
+const loadSelectedTrend = async (label: string, bucketSizeMs: number) => {
+  const { startTime, endTime } = getTimeRange()
+  selectedTrendData.value = await getFilteredTrafficTrend(
+    activeView.value,
+    label,
+    startTime,
+    endTime,
+    bucketSizeMs,
+  )
 }
 
 const handleSubRowClick = async (parentLabel: string, subLabel: string) => {
@@ -286,6 +323,22 @@ const currentViewLabel = computed(
 
       <!-- Time & Action Area -->
       <div class="flex items-center gap-2">
+        <div
+          v-if="runtimeConfig.public.serverBackendMode === true"
+          class="hidden items-center gap-1 rounded-lg border border-[color-mix(in_oklch,var(--color-base-content)_12%,transparent)] bg-base-200/60 px-2 py-1.5 text-[0.75rem] text-base-content/70 lg:flex"
+          :title="collectorStatus?.lastError || 'Server traffic collector'"
+        >
+          <IconServer :size="14" />
+          <span>
+            {{
+              collectorStatus?.connected ? '服务端采集中' : '服务端采集未连接'
+            }}
+          </span>
+          <span v-if="collectorStatus?.retentionDays" class="opacity-50">
+            {{ collectorStatus.retentionDays }}d
+          </span>
+        </div>
+
         <div
           v-if="selectedTimeRange === -1"
           class="animate-in fade-in zoom-in-95 flex items-center gap-1"
@@ -487,6 +540,18 @@ const currentViewLabel = computed(
               :title="t('traffic')"
             />
           </div>
+        </div>
+
+        <div
+          v-if="selectedRow"
+          class="animate-fade-slide-in min-h-[280px] min-w-0 overflow-hidden rounded-xl border border-[color-mix(in_oklch,var(--color-base-content)_10%,transparent)] bg-base-200 p-2 shadow-sm transition-all duration-200 [animation-delay:325ms] hover:border-[color-mix(in_oklch,var(--color-base-content)_20%,transparent)]"
+        >
+          <TrafficTrendChart
+            :data="selectedTrendData"
+            :start-time="getTimeRange().startTime"
+            :end-time="getTimeRange().endTime"
+            :title="selectedRow"
+          />
         </div>
 
         <!-- Row 3: Full-width Detail Table -->

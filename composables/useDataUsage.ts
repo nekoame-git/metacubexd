@@ -10,11 +10,35 @@ export interface AggregatedData {
 }
 
 export const useDataUsage = () => {
+  const runtimeConfig = useRuntimeConfig()
+  const useServerTraffic = computed(
+    () => runtimeConfig.public.serverBackendMode === true,
+  )
+
+  const request = async <T>(
+    path: string,
+    params: Record<string, string | number | undefined>,
+  ) => {
+    const searchParams = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) searchParams.set(key, String(value))
+    })
+    return $fetch<T>(`/api/traffic/${path}?${searchParams.toString()}`)
+  }
+
   const getAggregatedData = async (
     type: DataUsageType,
     startTime: number,
     endTime: number,
   ): Promise<AggregatedData[]> => {
+    if (useServerTraffic.value) {
+      return request<AggregatedData[]>('summary', {
+        dimension: type,
+        start: startTime,
+        end: endTime,
+      })
+    }
+
     const logs = await db.query(startTime, endTime)
     const map = new Map<string, AggregatedData>()
 
@@ -35,6 +59,9 @@ export const useDataUsage = () => {
           break
         case 'inboundUser':
           label = log.inboundUser
+          break
+        case 'rule':
+          label = [log.rule, log.rulePayload].filter(Boolean).join(' ')
           break
       }
 
@@ -64,6 +91,16 @@ export const useDataUsage = () => {
     startTime: number,
     endTime: number,
   ): Promise<AggregatedData[]> => {
+    if (useServerTraffic.value) {
+      return request<AggregatedData[]>('details', {
+        parentDimension: dimension,
+        parentLabel: label,
+        detailDimension: 'host',
+        start: startTime,
+        end: endTime,
+      })
+    }
+
     const logs = await db.query(startTime, endTime)
     const filteredLogs = logs.filter((log) => {
       switch (dimension) {
@@ -75,6 +112,8 @@ export const useDataUsage = () => {
           return log.process === label
         case 'inboundUser':
           return log.inboundUser === label
+        case 'rule':
+          return [log.rule, log.rulePayload].filter(Boolean).join(' ') === label
       }
       return false
     })
@@ -109,6 +148,16 @@ export const useDataUsage = () => {
     startTime: number,
     endTime: number,
   ): Promise<AggregatedData[]> => {
+    if (useServerTraffic.value) {
+      return request<AggregatedData[]>('details', {
+        parentDimension: 'host',
+        parentLabel: host,
+        detailDimension: 'outbound',
+        start: startTime,
+        end: endTime,
+      })
+    }
+
     const logs = await db.query(startTime, endTime)
     const filteredLogs = logs.filter((log) => {
       if (log.host !== host) return false
@@ -121,6 +170,11 @@ export const useDataUsage = () => {
           return log.outbound === parentLabel
         case 'inboundUser':
           return log.inboundUser === parentLabel
+        case 'rule':
+          return (
+            [log.rule, log.rulePayload].filter(Boolean).join(' ') ===
+            parentLabel
+          )
       }
       return false
     })
@@ -153,6 +207,16 @@ export const useDataUsage = () => {
     startTime: number,
     endTime: number,
   ): Promise<AggregatedData[]> => {
+    if (useServerTraffic.value) {
+      return request<AggregatedData[]>('details', {
+        parentDimension: 'host',
+        parentLabel: host,
+        detailDimension: 'sourceIP',
+        start: startTime,
+        end: endTime,
+      })
+    }
+
     const logs = await db.query(startTime, endTime)
     const filteredLogs = logs.filter((log) => log.host === host)
 
@@ -185,6 +249,16 @@ export const useDataUsage = () => {
     startTime: number,
     endTime: number,
   ): Promise<AggregatedData[]> => {
+    if (useServerTraffic.value) {
+      return request<AggregatedData[]>('details', {
+        parentDimension: 'outbound',
+        parentLabel: proxy,
+        detailDimension: 'sourceIP',
+        start: startTime,
+        end: endTime,
+      })
+    }
+
     const logs = await db.query(startTime, endTime)
     const filteredLogs = logs.filter(
       (log) => log.outbound === proxy && log.host === host,
@@ -249,6 +323,17 @@ export const useDataUsage = () => {
     endTime: number,
     bucketSizeMs: number,
   ): Promise<{ timestamp: number; upload: number; download: number }[]> => {
+    if (useServerTraffic.value) {
+      return request<{ timestamp: number; upload: number; download: number }[]>(
+        'trend',
+        {
+          start: startTime,
+          end: endTime,
+          bucketMs: bucketSizeMs,
+        },
+      )
+    }
+
     const logs = await db.query(startTime, endTime)
     const buckets = new Map<number, { upload: number; download: number }>()
 
@@ -275,6 +360,67 @@ export const useDataUsage = () => {
       .sort((a, b) => a.timestamp - b.timestamp)
   }
 
+  const getFilteredTrafficTrend = async (
+    dimension: DataUsageType,
+    label: string,
+    startTime: number,
+    endTime: number,
+    bucketSizeMs: number,
+  ): Promise<{ timestamp: number; upload: number; download: number }[]> => {
+    if (useServerTraffic.value) {
+      return request<{ timestamp: number; upload: number; download: number }[]>(
+        'trend',
+        {
+          dimension,
+          label,
+          start: startTime,
+          end: endTime,
+          bucketMs: bucketSizeMs,
+        },
+      )
+    }
+
+    const logs = await db.query(startTime, endTime)
+    const filteredLogs = logs.filter((log) => {
+      switch (dimension) {
+        case 'sourceIP':
+          return log.sourceIP === label
+        case 'host':
+          return log.host === label
+        case 'outbound':
+          return log.outbound === label
+        case 'process':
+          return log.process === label
+        case 'inboundUser':
+          return log.inboundUser === label
+        case 'rule':
+          return [log.rule, log.rulePayload].filter(Boolean).join(' ') === label
+        default:
+          return false
+      }
+    })
+    const buckets = new Map<number, { upload: number; download: number }>()
+    for (let t = startTime; t <= endTime; t += bucketSizeMs) {
+      const bucketStart = Math.floor(t / bucketSizeMs) * bucketSizeMs
+      buckets.set(bucketStart, { upload: 0, download: 0 })
+    }
+    filteredLogs.forEach((log) => {
+      const bucketStart =
+        Math.floor(log.timestamp / bucketSizeMs) * bucketSizeMs
+      if (buckets.has(bucketStart)) {
+        const bucket = buckets.get(bucketStart)!
+        bucket.upload += log.upload
+        bucket.download += log.download
+      }
+    })
+    return Array.from(buckets.entries())
+      .map(([timestamp, data]) => ({
+        timestamp,
+        ...data,
+      }))
+      .sort((a, b) => a.timestamp - b.timestamp)
+  }
+
   return {
     getAggregatedData,
     getSubStatsByHost,
@@ -283,5 +429,6 @@ export const useDataUsage = () => {
     getDevicesByProxyAndHost,
     getHostDetailStats,
     getTrafficTrend,
+    getFilteredTrafficTrend,
   }
 }

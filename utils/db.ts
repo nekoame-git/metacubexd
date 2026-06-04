@@ -6,13 +6,18 @@ export interface DataUsageLog {
   outbound: string
   process: string
   inboundUser: string
+  rule?: string
+  rulePayload?: string
+  connectionId?: string
+  chains?: string[]
+  start?: string
   upload: number
   download: number
 }
 
 const DB_NAME = 'metacubexd_db'
 const STORE_NAME = 'data_usage_logs'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 export class DataUsageDB {
   private db: IDBDatabase | null = null
@@ -38,6 +43,13 @@ export class DataUsageDB {
           store.createIndex('host', 'host', { unique: false })
           store.createIndex('outbound', 'outbound', { unique: false })
           store.createIndex('process', 'process', { unique: false })
+          store.createIndex('rule', 'rule', { unique: false })
+        } else if (event.oldVersion < 2) {
+          const transaction = (event.target as IDBOpenDBRequest).transaction
+          const store = transaction?.objectStore(STORE_NAME)
+          if (store && !store.indexNames.contains('rule')) {
+            store.createIndex('rule', 'rule', { unique: false })
+          }
         }
       }
 
@@ -81,6 +93,8 @@ export class DataUsageDB {
           results.push({
             ...cursor.value,
             inboundUser: cursor.value.inboundUser || 'Unknown',
+            rule: cursor.value.rule || 'Unknown',
+            rulePayload: cursor.value.rulePayload || '',
           })
           cursor.continue()
         } else {

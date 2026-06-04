@@ -5,6 +5,7 @@ import { useKeyboardShortcuts } from '~/composables/useKeyboardShortcuts'
 const configStore = useConfigStore()
 const endpointStore = useEndpointStore()
 const globalStore = useGlobalStore()
+const runtimeConfig = useRuntimeConfig()
 
 // Initialize keyboard shortcuts
 const { setupKeyboardListeners } = useKeyboardShortcuts()
@@ -47,7 +48,10 @@ watch(
 
 // In mock mode, always show protected resources
 const hasEndpoint = computed(
-  () => useMockMode() || !!endpointStore.currentEndpoint,
+  () =>
+    useMockMode() ||
+    runtimeConfig.public.serverBackendMode === true ||
+    !!endpointStore.currentEndpoint,
 )
 </script>
 

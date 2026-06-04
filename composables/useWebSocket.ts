@@ -21,6 +21,10 @@ export function useBackendWebSocket() {
 
   // Mock mode intervals
   let mockInterval: ReturnType<typeof setInterval> | null = null
+  let serverStateInterval: ReturnType<typeof setInterval> | null = null
+  let serverLogsInterval: ReturnType<typeof setInterval> | null = null
+  let isPollingServerState = false
+  let isPollingServerLogs = false
 
   // Auto-reconnect bookkeeping
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
@@ -60,8 +64,17 @@ export function useBackendWebSocket() {
     const params = new URLSearchParams()
     if (secret) params.set('token', secret)
 
-    const ws = new WebSocket(`${wsUrl}/${path}?${params.toString()}`)
+    return createRawWebSocket(
+      `${wsUrl}/${path}?${params.toString()}`,
+      onMessage,
+    )
+  }
 
+  const createRawWebSocket = (
+    url: string,
+    onMessage: (data: unknown) => void,
+  ) => {
+    const ws = new WebSocket(url)
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data)
@@ -72,7 +85,7 @@ export function useBackendWebSocket() {
     }
 
     ws.onerror = (error) => {
-      console.error(`WebSocket error for ${path}:`, error)
+      console.error(`WebSocket error for ${url}:`, error)
     }
 
     ws.onclose = () => {
@@ -166,6 +179,75 @@ export function useBackendWebSocket() {
       return
     }
 
+    const runtimeConfig = useRuntimeConfig()
+    if (runtimeConfig.public.serverBackendMode === true) {
+      const pollState = async () => {
+        if (isPollingServerState) return
+        isPollingServerState = true
+        try {
+          const [connectionsSnapshot, realtimeState] = await Promise.all([
+            $fetch<(WsMsg & { updatedAt?: number }) | null>(
+              '/api/traffic/connections',
+            ),
+            $fetch<{
+              traffic: TrafficData | null
+              memory: MemoryData | null
+            }>('/api/traffic/realtime'),
+          ])
+
+          if (connectionsSnapshot) {
+            connectionsStore.updateFromWsMsg(connectionsSnapshot)
+            globalStore.addConnectionCountDataPoint(
+              Date.now(),
+              connectionsSnapshot.connections?.length ?? 0,
+            )
+          }
+
+          if (realtimeState.traffic) {
+            globalStore.setLatestTraffic(realtimeState.traffic)
+            globalStore.addTrafficDataPoint(
+              Date.now(),
+              realtimeState.traffic.down,
+              realtimeState.traffic.up,
+            )
+          }
+
+          if (realtimeState.memory) {
+            globalStore.setLatestMemory(realtimeState.memory)
+            globalStore.addMemoryDataPoint(
+              Date.now(),
+              realtimeState.memory.inuse,
+            )
+          }
+        } catch (error) {
+          console.error('[Server Backend] Failed to poll stored state', error)
+        } finally {
+          isPollingServerState = false
+        }
+      }
+
+      const pollLogs = async () => {
+        if (isPollingServerLogs || logsStore.paused) return
+        isPollingServerLogs = true
+        try {
+          const logs = await $fetch<(Log & { seq: number })[]>(
+            `/api/traffic/logs?limit=${configStore.logMaxRows}`,
+          )
+          logsStore.setLogs(logs)
+        } catch (error) {
+          console.error('[Server Backend] Failed to poll stored logs', error)
+        } finally {
+          isPollingServerLogs = false
+        }
+      }
+
+      pollState()
+      pollLogs()
+      serverStateInterval = setInterval(pollState, 1000)
+      serverLogsInterval = setInterval(pollLogs, 1000)
+      return
+    }
+
     // Connections WebSocket
     connectionsWs = createWebSocket('connections', (data: unknown) => {
       const wsMsg = data as WsMsg
@@ -214,6 +296,16 @@ export function useBackendWebSocket() {
       clearInterval(mockInterval)
       mockInterval = null
     }
+    if (serverStateInterval) {
+      clearInterval(serverStateInterval)
+      serverStateInterval = null
+    }
+    if (serverLogsInterval) {
+      clearInterval(serverLogsInterval)
+      serverLogsInterval = null
+    }
+    isPollingServerState = false
+    isPollingServerLogs = false
 
     closeWs(connectionsWs)
     closeWs(trafficWs)
@@ -255,6 +347,8 @@ export function useBackendWebSocket() {
 
   // Reconnect (e.g., when log level changes)
   const reconnectLogs = () => {
+    const runtimeConfig = useRuntimeConfig()
+    if (runtimeConfig.public.serverBackendMode === true) return
     closeWs(logsWs)
     logsWs = useMockMode() ? null : createLogsWebSocket()
   }

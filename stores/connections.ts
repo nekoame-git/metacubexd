@@ -280,6 +280,11 @@ export const useConnectionsStore = defineStore('connections', () => {
           conn.metadata.inboundName ||
           conn.metadata.type ||
           'Unknown',
+        rule: conn.rule || 'Unknown',
+        rulePayload: conn.rulePayload || '',
+        connectionId: conn.id,
+        chains: conn.chains || [],
+        start: conn.start,
         upload: uploadDelta,
         download: downloadDelta,
       }

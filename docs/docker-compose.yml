@@ -7,6 +7,14 @@ services:
     restart: always
     ports:
       - '80:80'
+    environment:
+      - METACUBEXD_BACKEND_URL=http://127.0.0.1:9090
+      - METACUBEXD_BACKEND_SECRET=
+      - METACUBEXD_TRAFFIC_ENABLED=true
+      - METACUBEXD_TRAFFIC_DB_PATH=/data/traffic.sqlite
+      - METACUBEXD_TRAFFIC_RETENTION_DAYS=180
+    volumes:
+      - ./metacubexd-data:/data
 
   # optional
   meta:

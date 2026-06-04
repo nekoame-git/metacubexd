@@ -82,24 +82,24 @@ option {
   color: var(--color-base-content);
 }
 
-/* Default font - Ubuntu from @nuxt/fonts */
 body {
   font-family:
-    'Ubuntu', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
-    'Noto Sans CJK SC', system-ui, sans-serif;
+    ui-sans-serif, system-ui, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif;
 }
 
 /* Custom font families */
 .font-twemoji {
   font-family:
-    'Twemoji Mozilla', 'Ubuntu', 'PingFang SC', 'Hiragino Sans GB',
-    'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif;
+    'Twemoji Mozilla', ui-sans-serif, system-ui, 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui,
+    sans-serif;
 }
 
 .font-default {
   font-family:
-    'Ubuntu', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
-    'Noto Sans CJK SC', system-ui, sans-serif;
+    ui-sans-serif, system-ui, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif;
 }
 
 /* Animated glow pulse effect for selected items */

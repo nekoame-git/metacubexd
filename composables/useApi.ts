@@ -204,6 +204,16 @@ export function useRequest() {
     }
   }
 
+  const runtimeConfig = useRuntimeConfig()
+  const useServerBackend = runtimeConfig.public.serverBackendMode === true
+
+  if (useServerBackend) {
+    return ky.create({
+      prefix: '/api/backend',
+      timeout: 5000,
+    })
+  }
+
   if (!endpoint) {
     return ky.create({})
   }

@@ -7,6 +7,9 @@ export default defineNuxtRouteMiddleware((to) => {
   if (config.public.mockMode) {
     return
   }
+  if (config.public.serverBackendMode === true) {
+    return
+  }
 
   const endpointStore = useEndpointStore()
   const hasEndpoint = !!endpointStore.currentEndpoint
