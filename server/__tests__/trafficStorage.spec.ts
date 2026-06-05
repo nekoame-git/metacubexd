@@ -1,3 +1,6 @@
+// @vitest-environment node
+// This suite exercises server-side storage that imports the `node:sqlite`
+// builtin, which cannot be bundled for the default jsdom (browser) environment.
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'

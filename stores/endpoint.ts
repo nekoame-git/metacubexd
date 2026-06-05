@@ -2,14 +2,14 @@ import type { Endpoint } from '~/types'
 import { defineStore } from 'pinia'
 
 export const useEndpointStore = defineStore('endpoint', () => {
-  const runtimeConfig = useRuntimeConfig()
   const serverEndpointLabel = 'MetaCubeXD server backend'
+  const isServerBackendMode = useIsServerBackendMode()
 
   // State
   const selectedEndpoint = useLocalStorage<string>('selectedEndpoint', '')
   const savedEndpointList = useLocalStorage<Endpoint[]>('endpointList', [])
   const serverEndpoint = computed<Endpoint | null>(() => {
-    if (runtimeConfig.public.serverBackendMode !== true) return null
+    if (!isServerBackendMode.value) return null
     return {
       id: 'server-backend',
       url: serverEndpointLabel,

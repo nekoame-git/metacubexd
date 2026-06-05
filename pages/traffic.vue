@@ -31,7 +31,7 @@ const {
   getDevicesByHost,
   getDevicesByProxyAndHost,
 } = useDataUsage()
-const runtimeConfig = useRuntimeConfig()
+const isServerBackendMode = useIsServerBackendMode()
 
 useHead({ title: computed(() => t('dataUsage')) })
 type SortField = 'label' | 'upload' | 'download' | 'total' | 'count'
@@ -116,7 +116,7 @@ const fetchData = async () => {
 
     dataUsageEntries.value = aggregated
     trendData.value = trend
-    if (runtimeConfig.public.serverBackendMode === true) {
+    if (isServerBackendMode.value) {
       collectorStatus.value = await $fetch('/api/traffic/status').catch(
         () => null,
       )
@@ -324,7 +324,7 @@ const currentViewLabel = computed(
       <!-- Time & Action Area -->
       <div class="flex items-center gap-2">
         <div
-          v-if="runtimeConfig.public.serverBackendMode === true"
+          v-if="isServerBackendMode"
           class="hidden items-center gap-1 rounded-lg border border-[color-mix(in_oklch,var(--color-base-content)_12%,transparent)] bg-base-200/60 px-2 py-1.5 text-[0.75rem] text-base-content/70 lg:flex"
           :title="collectorStatus?.lastError || 'Server traffic collector'"
         >

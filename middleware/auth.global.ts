@@ -1,4 +1,4 @@
-export default defineNuxtRouteMiddleware((to) => {
+export default defineNuxtRouteMiddleware(async (to) => {
   // Skip middleware on server
   if (import.meta.server) return
 
@@ -7,7 +7,10 @@ export default defineNuxtRouteMiddleware((to) => {
   if (config.public.mockMode) {
     return
   }
-  if (config.public.serverBackendMode === true) {
+
+  await detectServerBackendMode()
+  if (useIsServerBackendMode().value) {
+    applyServerBackendEndpoint()
     return
   }
 

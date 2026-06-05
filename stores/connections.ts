@@ -214,8 +214,12 @@ export const useConnectionsStore = defineStore('connections', () => {
     const activeIds = new Set(activeConns.map((c) => c.id))
 
     // Data usage tracking is opt-out: skip the per-connection diff + IndexedDB
-    // buffering entirely when the user has disabled it.
-    if (configStore.enableDataUsageTracking) {
+    // buffering entirely when the user has disabled it. Server-persisted mode
+    // writes usage into the container SQLite DB instead.
+    if (
+      configStore.enableDataUsageTracking &&
+      !useIsServerBackendMode().value
+    ) {
       updateDataUsage(activeConns)
     }
 

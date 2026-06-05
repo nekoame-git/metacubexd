@@ -179,8 +179,7 @@ export function useBackendWebSocket() {
       return
     }
 
-    const runtimeConfig = useRuntimeConfig()
-    if (runtimeConfig.public.serverBackendMode === true) {
+    if (useIsServerBackendMode().value) {
       const pollState = async () => {
         if (isPollingServerState) return
         isPollingServerState = true
@@ -347,8 +346,7 @@ export function useBackendWebSocket() {
 
   // Reconnect (e.g., when log level changes)
   const reconnectLogs = () => {
-    const runtimeConfig = useRuntimeConfig()
-    if (runtimeConfig.public.serverBackendMode === true) return
+    if (useIsServerBackendMode().value) return
     closeWs(logsWs)
     logsWs = useMockMode() ? null : createLogsWebSocket()
   }

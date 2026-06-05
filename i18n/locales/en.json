@@ -195,6 +195,7 @@
   "show": "Show",
   "noLatencyHistory": "No latency history",
   "dataUsageInfo": "Data usage monitoring is performed on the client-side (browser). When the browser is closed, monitoring will likely not run.",
+  "dataUsageInfoServer": "Data usage is recorded by the dashboard container into /data/traffic.sqlite. LAN and remote access share the same database.",
   "basic": "Basic",
   "start": "Start",
   "rulePayload": "Rule Payload",

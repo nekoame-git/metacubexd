@@ -8,9 +8,12 @@ services:
     ports:
       - '80:80'
     environment:
+      # Reachable from inside this container (not the browser). Use host IP or host.docker.internal.
       - METACUBEXD_BACKEND_URL=http://127.0.0.1:9090
       - METACUBEXD_BACKEND_SECRET=
       - METACUBEXD_TRAFFIC_ENABLED=true
+      # Ensures LAN + remote tunnel clients use /api/backend and shared /data/traffic.sqlite
+      - NUXT_PUBLIC_SERVER_BACKEND_MODE=true
       - METACUBEXD_TRAFFIC_DB_PATH=/data/traffic.sqlite
       - METACUBEXD_TRAFFIC_RETENTION_DAYS=180
     volumes:

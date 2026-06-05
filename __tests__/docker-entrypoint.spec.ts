@@ -12,4 +12,9 @@ describe('docker-entrypoint', () => {
     expect(entrypoint).toContain('NUXT_PUBLIC_DEFAULT_BACKEND_URL')
     expect(entrypoint).not.toContain('/app/.output/public/config.js')
   })
+
+  it('enables server backend mode when METACUBEXD_BACKEND_URL is set', () => {
+    expect(entrypoint).toContain('NUXT_PUBLIC_SERVER_BACKEND_MODE=true')
+    expect(entrypoint).toContain('METACUBEXD_BACKEND_URL')
+  })
 })

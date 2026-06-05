@@ -30,6 +30,19 @@ vi.stubGlobal('useRuntimeConfig', () => ({
   },
 }))
 
+// Auto-import simulation for the server-backend composable. Reads the current
+// `useRuntimeConfig` global at call time so per-test re-stubs are honored.
+vi.stubGlobal('useIsServerBackendMode', () =>
+  computed(
+    () =>
+      (
+        globalThis as {
+          useRuntimeConfig?: () => { public?: Record<string, unknown> }
+        }
+      ).useRuntimeConfig?.().public?.serverBackendMode === true,
+  ),
+)
+
 function createStorageMock() {
   let store: Record<string, string> = {}
 

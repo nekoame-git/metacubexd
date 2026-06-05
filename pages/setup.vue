@@ -28,6 +28,7 @@ const endpointError = ref<EndpointCheckError>(null)
 // Get default backend URL from config
 // Priority: runtime config (NUXT_PUBLIC_DEFAULT_BACKEND_URL) > config.js > fallback
 const runtimeConfig = useRuntimeConfig()
+const isServerBackendMode = useIsServerBackendMode()
 const defaultBackendURL = computed(() => {
   if (runtimeConfig.public.defaultBackendURL) {
     return runtimeConfig.public.defaultBackendURL
@@ -53,10 +54,7 @@ function onSetupSuccess(id: string) {
 }
 
 async function onEndpointSelect(id: string) {
-  if (
-    runtimeConfig.public.serverBackendMode === true &&
-    id === 'server-backend'
-  ) {
+  if (isServerBackendMode.value && id === 'server-backend') {
     endpointError.value = null
     onSetupSuccess(id)
     return
@@ -76,7 +74,7 @@ async function onEndpointSelect(id: string) {
 }
 
 async function onSubmit() {
-  if (runtimeConfig.public.serverBackendMode === true) {
+  if (isServerBackendMode.value) {
     endpointError.value = null
     onSetupSuccess('server-backend')
     return
@@ -128,6 +126,8 @@ function onRemove(id: string) {
 
 // Auto-login logic
 onMounted(async () => {
+  await detectServerBackendMode()
+
   const search =
     route.query ||
     (typeof window !== 'undefined'
@@ -154,7 +154,7 @@ onMounted(async () => {
     }
   }
 
-  if (runtimeConfig.public.serverBackendMode === true) {
+  if (isServerBackendMode.value) {
     formData.url = currentOrigin.value
     formData.secret = ''
     onSetupSuccess('server-backend')

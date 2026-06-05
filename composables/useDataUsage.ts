@@ -10,10 +10,7 @@ export interface AggregatedData {
 }
 
 export const useDataUsage = () => {
-  const runtimeConfig = useRuntimeConfig()
-  const useServerTraffic = computed(
-    () => runtimeConfig.public.serverBackendMode === true,
-  )
+  const useServerTraffic = useIsServerBackendMode()
 
   const request = async <T>(
     path: string,

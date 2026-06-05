@@ -24,9 +24,11 @@ export default defineNuxtConfig({
     public: {
       appVersion: pkg.version,
       mockMode: process.env.MOCK_MODE === 'true',
-      serverBackendMode: !!(
-        process.env.METACUBEXD_BACKEND_URL || process.env.DEFAULT_BACKEND_URL
-      ),
+      serverBackendMode:
+        process.env.NUXT_PUBLIC_SERVER_BACKEND_MODE === 'true' ||
+        !!(
+          process.env.METACUBEXD_BACKEND_URL || process.env.DEFAULT_BACKEND_URL
+        ),
       defaultBackendURL: '',
     },
   },
